@@ -71,12 +71,12 @@ class ParticipantsCount extends PureComponent<Props> {
     render() {
         return (
             <div
-                className = 'participants-count'
-                onClick = { this._onClick }>
-                <span className = 'participants-count-number'>
+                className='participants-count'
+                onClick={this._onClick}>
+                <span className='participants-count-number'>
                     {this.props.count}
                 </span>
-                <span className = 'participants-count-icon' />
+                <span className='participants-count-icon' />
             </div>
         );
     }
