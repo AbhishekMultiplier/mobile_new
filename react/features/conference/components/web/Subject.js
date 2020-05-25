@@ -47,7 +47,7 @@ type Props = {
  */
 class Subject extends Component<Props> {
 
-    constructor() {
+    constructor(props) {
         super(props);
         this.state = {
             isStartRecording: false,
