@@ -1,6 +1,6 @@
 // @flow
 
-import React, { PureComponent } from 'react';
+import React, { Component } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import { ColorSchemeRegistry } from '../../../base/color-scheme';
@@ -13,7 +13,11 @@ import { doInvitePeople } from '../../../invite/actions.native';
 
 import styles from './styles';
 import { Icon, IconAddPeople } from '../../../base/icons';
-
+import { JitsiRecordingConstants } from '../../../base/lib-jitsi-meet';
+import {
+    PARTICIPANT_ROLE,
+    getLocalParticipant
+} from '../../../base/participants';
 /**
  * Props type of the component.
  */
@@ -42,13 +46,16 @@ type Props = {
     /**
      * Function to be used to translate i18n labels.
      */
-    t: Function
+    t: Function,
+    isModerator: boolean,
+    _conference: object,
+    _participantCount: number
 };
 
 /**
  * Implements the UI elements to be displayed in the lonely meeting experience.
  */
-class LonelyMeetingExperience extends PureComponent<Props> {
+class LonelyMeetingExperience extends Component<Props> {
     /**
      * Instantiates a new component.
      *
@@ -58,7 +65,34 @@ class LonelyMeetingExperience extends PureComponent<Props> {
         super(props);
 
         this._onPress = this._onPress.bind(this);
+        this.state = {
+            isStartRecording: false,
+        }
     }
+    componentDidUpdate(prevProps: *, prevState: State) {
+
+        if (prevProps._participantCount === 1 && this.props._participantCount === 2) {
+
+            if (this.props.isModerator && !this.state.isStartRecording) {
+                console.log('recording')
+                this.setState({ isStartRecording: true }, () => {
+                    const appData = JSON.stringify({
+                        'file_recording_metadata': {
+                            'share': true
+                        }
+                    });
+
+                    this.props._conference.startRecording({
+                        mode: JitsiRecordingConstants.mode.FILE,
+                        appData
+                    });
+                });
+
+            }
+        }
+
+    }
+
 
     /**
      * Implements {@code PureComponent#render}.
@@ -73,34 +107,34 @@ class LonelyMeetingExperience extends PureComponent<Props> {
         }
 
         return (
-            <View style = { styles.lonelyMeetingContainer }>
+            <View style={styles.lonelyMeetingContainer}>
                 <Text
-                    style = { [
+                    style={[
                         styles.lonelyMessage,
                         _styles.lonelyMessage
-                    ] }>
-                    { t('lonelyMeetingExperience.youAreAlone') }
+                    ]}>
+                    {t('lonelyMeetingExperience.youAreAlone')}
                 </Text>
-                { !_isInviteFunctionsDiabled && (
+                {!_isInviteFunctionsDiabled && (
                     <TouchableOpacity
-                        onPress = { this._onPress }
-                        style = { [
+                        onPress={this._onPress}
+                        style={[
                             styles.lonelyButton,
                             _styles.lonelyButton
-                        ] }>
+                        ]}>
                         <Icon
-                            size = { 24 }
-                            src = { IconAddPeople }
-                            style = { styles.lonelyButtonComponents } />
+                            size={24}
+                            src={IconAddPeople}
+                            style={styles.lonelyButtonComponents} />
                         <Text
-                            style = { [
+                            style={[
                                 styles.lonelyButtonComponents,
                                 _styles.lonelyMessage
-                            ] }>
-                            { t('lonelyMeetingExperience.button') }
+                            ]}>
+                            {t('lonelyMeetingExperience.button')}
                         </Text>
                     </TouchableOpacity>
-                ) }
+                )}
             </View>
         );
     }
@@ -127,11 +161,16 @@ class LonelyMeetingExperience extends PureComponent<Props> {
 function _mapStateToProps(state): $Shape<Props> {
     const { disableInviteFunctions } = state['features/base/config'];
     const flag = getFeatureFlag(state, INVITE_ENABLED, true);
-
+    const _participantCount = getParticipantCount(state);
+    const isModerator
+        = getLocalParticipant(state).role === PARTICIPANT_ROLE.MODERATOR;
     return {
         _isInviteFunctionsDiabled: !flag || disableInviteFunctions,
-        _isLonelyMeeting: getParticipantCount(state) === 1,
-        _styles: ColorSchemeRegistry.get(state, 'Conference')
+        _isLonelyMeeting: _participantCount === 1,
+        isModerator,
+        _participantCount,
+        _styles: ColorSchemeRegistry.get(state, 'Conference'),
+        _conference: state['features/base/conference'].conference
     };
 }
 
